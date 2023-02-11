@@ -1,0 +1,173 @@
+<script>
+//Initial References
+const message = document.getElementById("message");
+const hintRef = document.querySelector(".hint-ref");
+const controls = document.querySelector(".controls-container");
+const startBtn = document.getElementById("start");
+const letterContainer = document.getElementById("letter-container");
+const userInpSection = document.getElementById("user-input-section");
+const resultText = document.getElementById("result");
+const formText = document.getElementById("form");
+const word = document.getElementById("word");
+
+let randomWord = "",
+  randomHint = "";
+let winCount = 0,
+  lossCount = 0;
+
+//Generate random value
+const generateRandomValue = (array) => Math.floor(Math.random() * array.length);
+
+//Block all the buttons
+const blocker = () => {
+  let lettersButtons = document.querySelectorAll(".letters");
+  stopGame();
+};
+
+//Start Game
+startBtn.addEventListener("click", () => {
+  controls.classList.add("hide");
+  init();
+});
+
+//Stop Game
+const stopGame = () => {
+  controls.classList.remove("hide");
+};
+
+//Generate Word Function
+const generateWord = () => {
+
+  google.script.run.withSuccessHandler((dataOptions)=>{
+  options = dataOptions
+  const words = Object.keys(options);
+
+  letterContainer.classList.remove("hide");
+  userInpSection.innerText = "";
+  randomWord = words[generateRandomValue(words)];
+  randomHint = options[randomWord];
+  hintRef.innerHTML = `<div id="wordHint"> 
+   <span>คำใบ้ : </span><image src="${randomHint}" style="width:150px; height:auto;"/></div>`; // ภาพ
+  //  <span>คำใบ้ : </span>${randomHint}</div>`; // Text
+  let displayItem = "";
+  randomWord.split("").forEach((value) => {
+    displayItem += '<span class="inputSpace">_ </span>';
+  });
+
+  //Display each element as span
+  userInpSection.innerHTML = displayItem;
+  userInpSection.innerHTML += `<div id='chanceCount'>สามารถตอบผิดได้อีก : ${lossCount} ครั้ง</div>`;
+   }).getData()
+
+
+};
+
+//Initial Function
+const init = () => {
+  winCount = 0;
+  lossCount = 5;
+  randomWord = "";
+  word.innerText = "";
+  randomHint = "";
+  message.innerText = "";
+  userInpSection.innerHTML = "";
+  letterContainer.classList.add("hide");
+  letterContainer.innerHTML = "";
+  generateWord();
+
+  //For creating letter buttons
+  for (let i = 65; i < 91; i++) {
+    let button = document.createElement("button");
+    button.classList.add("letters");
+
+    //Number to ASCII[A-Z]
+    button.innerText = String.fromCharCode(i);
+
+    //Character button onclick
+    button.addEventListener("click", () => {
+      message.innerText = `Correct Letter`;
+      message.style.color = "#008000";
+      let charArray = randomWord.toUpperCase().split("");
+      let inputSpace = document.getElementsByClassName("inputSpace");
+
+      //If array contains clicked value replace the matched Dash with Letter
+      if (charArray.includes(button.innerText)) {
+        charArray.forEach((char, index) => {
+          //If character in array is same as clicked button
+          if (char === button.innerText) {
+            button.classList.add("correct");
+            //Replace dash with letter
+            inputSpace[index].innerText = char;
+            //increment counter
+            winCount += 1;
+            //If winCount equals word length
+            if (winCount == charArray.length) {
+              word.innerHTML = `คำนี้คือคำว่า : <span id="wordwin">${randomWord}</span>`;
+              resultText.innerHTML = "You Win ! 🎉 ";
+              formText.innerHTML = `<center><input type="text" class="form-control mb-2 text-center"" id="w1" placeholder="Player Name"> <button type="button" class="btn btn-warning mt-4" onclick="savenameWin()" style="padding-top: 15px;padding-bottom: 15px;margin-top: 20px;">ส่งชื่อผู้เล่น</button></center>`;
+              startBtn.innerText = "Restart";
+              start.classList.add("hide");
+              //block all buttons
+              blocker();
+            }
+          }
+        });
+      } else {
+        //lose count
+        button.classList.add("incorrect");
+        lossCount -= 1;
+        document.getElementById(
+          "chanceCount"
+        ).innerText = `Chances Left: ${lossCount}`;
+        message.innerText = `Incorrect Letter`;
+        message.style.color = "#ff0000";
+        if (lossCount == 0) {
+          word.innerHTML = `คำนี้คือคำว่า : <span id="wordloss">${randomWord}</span>`;
+          resultText.innerHTML = "You Lose ! 😂";
+              formText.innerHTML = `<center><input type="text" class="form-control mb-2 text-center"" id="l1" placeholder="Player Name"> <button type="button" class="btn btn-warning mt-4" onclick="savenameLoss()" style="padding-top: 15px;padding-bottom: 15px;margin-top: 20px;">ส่งชื่อผู้เล่น</button></center>`;          
+          blocker();
+          start.classList.add("hide");
+        }
+      }
+
+      //Disable clicked buttons
+      button.disabled = true;
+    });
+
+    //Append generated buttons to the letters container
+    letterContainer.appendChild(button);
+  }
+};
+
+
+
+//Save Name 
+function savenameLoss(){
+  var nameplayer = document.getElementById("l1").value //แพ้
+  var word = document.getElementById("wordloss").innerText
+  var score = "Loss"
+    if(l1.value == ""){
+  Swal.fire({ position: 'center', icon: 'warning', title: 'กรอกชื่อผู้เล่นด้วยครับ', showConfirmButton: false, timer: 1500 })
+    }else{
+  google.script.run.savename(nameplayer,score,word)
+  l1.value = "";
+  Swal.fire({ position: 'center', icon: 'success', title: 'บันทึกเรียบร้อยแล้ว', showConfirmButton: false, timer: 1500 })
+  startBtn.click()
+}
+}
+function savenameWin(){
+  var nameplayer = document.getElementById("w1").value //ชนะ
+  var word = document.getElementById("wordwin").innerText
+  var score = "Win" 
+      if(w1.value == ""){
+  Swal.fire({ position: 'center', icon: 'warning', title: 'กรอกชื่อผู้เล่นด้วยครับ', showConfirmButton: false, timer: 1500 })
+    }else{
+  google.script.run.savename(nameplayer,score,word)
+  w1.value = "";
+  Swal.fire({ position: 'center', icon: 'success', title: 'บันทึกเรียบร้อยแล้ว', showConfirmButton: false, timer: 1500 })
+    startBtn.click()
+}
+}
+
+</script>
+
